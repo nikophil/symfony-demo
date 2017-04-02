@@ -1,0 +1,86 @@
+application:
+    image: c2is/application
+    environment:
+        - SYMFONY_ENV=dev
+    volumes:
+        - /var/www/symfony-demo:/var/www/symfony
+    tty: true
+
+php:
+    build: docker/containers/php-fpm
+    ports:
+        - 9000:9000
+    environment:
+        - SYMFONY_ENV=dev
+        - SYMFONY_DEBUG=1
+        - SYMFONY__MYSQL_HOST_ENV=172.17.0.1
+        - SYMFONY__MYSQL_PORT_ENV=3305
+        - SYMFONY__MYSQL_PORT_TEST_ENV=3304
+        - SYMFONY__MYSQL_USER_ENV=root
+        - SYMFONY__MYSQL_PASSWORD_ENV=root
+        - SYMFONY__MYSQL_BASE_NAME_ENV=azureva
+        - SYMFONY__REDIS_HOST_ENV=redis://172.17.0.1:6380
+        - SYMFONY__MAILER_HOST_ENV=172.17.0.1
+        - SYMFONY__TIGRES_CERTIF_ENV=85hQ3M!qrN
+    volumes_from:
+        - application
+    links :
+        - mysql:mysql
+
+apache:
+    build: docker/containers/apache
+    ports:
+        - 81:80
+    links:
+        - php:php
+    volumes_from:
+        - application
+    volumes:
+        - ./docker/logs/apache/:/var/log/apache2
+
+mysql:
+    image: mysql:5.6
+    restart: always
+    ports:
+        - 3305:3306
+    environment:
+        - MYSQL_ROOT_PASSWORD=root
+        - MYSQL_PASSWORD=root
+        - MYSQL_USER=root
+        - MYSQL_DATABASE=azureva
+
+mysql_test:
+    image: mysql:5.6
+    restart: always
+    ports:
+        - 3304:3306
+    environment:
+        - MYSQL_ROOT_PASSWORD=root
+        - MYSQL_PASSWORD=root
+        - MYSQL_USER=root
+        - MYSQL_DATABASE=azureva
+
+redis:
+    image: redis:3.0.7-alpine
+    ports:
+        - 6380:6379
+
+elasticsearch:
+    image: c2is/elasticsearch:2.3
+    ports:
+        - 9201:9200
+
+logstash:
+    build: docker/containers/logstash
+    volumes_from:
+        - application
+    volumes:
+        - ./docker/containers/logstash/patterns:/opt/logstash/patterns
+        - ./docker/containers/logstash/conf:/opt/logstash/conf
+
+kibana:
+    build: docker/containers/kibana
+    ports:
+        - 5602:5601
+    links:
+        - elasticsearch:elasticsearch
