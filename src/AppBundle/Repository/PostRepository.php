@@ -14,6 +14,7 @@ namespace AppBundle\Repository;
 use AppBundle\Entity\Post;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
+use Doctrine\ORM\Query\ResultSetMappingBuilder;
 use Pagerfanta\Adapter\DoctrineORMAdapter;
 use Pagerfanta\Pagerfanta;
 
@@ -57,5 +58,103 @@ class PostRepository extends EntityRepository
         $paginator->setCurrentPage($page);
 
         return $paginator;
+    }
+
+    public function getPostsWithPreparedQuery()
+    {
+        $stmt = $this->getEntityManager()
+            ->getConnection()
+            ->prepare('
+                SELECT p.*
+                FROM symfony_demo_post p
+                ORDER BY p.publishedAt DESC
+            ');
+
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    public function getPostsWithNativeQuery($id)
+    {
+        $rsm = new ResultSetMappingBuilder($this->getEntityManager());
+        $rsm->addRootEntityFromClassMetadata(Post::class, 'p');
+
+        return $this->getEntityManager()
+            ->createNativeQuery('
+                SELECT p.*
+                FROM symfony_demo_post p
+                WHERE p.id < :id
+                ORDER BY p.publishedAt DESC
+            ', $rsm)
+            ->setParameter('id', $id)
+            ->getResult();
+    }
+
+
+    public function getPostsWithRawSQL($id)
+    {
+        return $this->getEntityManager()
+            ->getConnection()
+            ->executeQuery('
+                SELECT p.*
+                FROM symfony_demo_post p
+                WHERE p.id < '.$id.'
+                ORDER BY p.publishedAt DESC
+            ')  // ouch...
+            ->fetchAll();
+    }
+
+    public function getPostsWithRawDQL($id)
+    {
+        return $this->getEntityManager()
+            ->createQuery('
+                SELECT p
+                FROM AppBundle:Post p
+                WHERE p.id < :id
+                ORDER BY p.publishedAt DESC
+            ')
+            ->setParameter('id', $id)
+            ->getResult()
+        ;
+    }
+
+    public function getPostsAsListWithCustomHydrator($id)
+    {
+        return $this->createQueryBuilder('p')
+            ->select('p.id, p.title')
+            ->where('p.id < :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getResult('KeyValueListHydrator');
+    }
+
+    public function getPostAsPartialObjects($id)
+    {
+        return $this->createQueryBuilder('p')
+            ->select('partial p.{id, title}')
+            ->where('p.id < :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function getOnlyPostTitles($id)
+    {
+        return $this->createQueryBuilder('p')
+            ->select('p.title')
+            ->where('p.id < :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function getPostsAsObjects($id)
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.id < :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getResult();
     }
 }

@@ -3,37 +3,134 @@
 {% block body_id 'blog_index' %}
 
 {% block main %}
-    {% for post in posts %}
-        <article class="post">
-            <h2>
-                <a href="{{ path('blog_post', {slug: post.slug}) }}">
-                    {{ post.title }}
-                </a>
-            </h2>
+    <pre>
+        <code class="php">
+public function getPostsAsObjects($id)
+{
+    return $this->createQueryBuilder('p')
+        ->where('p.id < :id')
+        ->setParameter('id', $id)
+        ->getQuery()
+        ->getResult();
+}
+        </code>
+    </pre>
+    {{ dump(postsAsObjects) }}
+    <pre>
+        <code class="php">
+            public function getOnlyPostTitles($id)
+            {
+            return $this->createQueryBuilder('p')
+            ->select('p.title')
+            ->where('p.id < :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getResult();
+            }
+        </code>
+    </pre>
+    {{ dump(onlyPostTitles) }}
+    <pre>
+        <code class="php">
+            public function getPostAsPartialObjects($id)
+            {
+            return $this->createQueryBuilder('p')
+            ->select('partial p.{id, title}')
+            ->where('p.id < :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getResult();
+            }
+        </code>
+    </pre>
+    {{ dump(postAsPartialObjects) }}
+    <pre>
+        <code class="php">
+            public function getPostsAsListWithCustomHydrator($id)
+            {
+            return $this->createQueryBuilder('p')
+            ->select('p.id, p.title')
+            ->where('p.id < :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getResult('KeyValueListHydrator'); // custom hydrator is a php class and needs to be defined in config.yml
+            }
+        </code>
+    </pre>
+    {{ dump(postsAsListWithCustomHydrator) }}
+    <pre>
+        <code class="php">
+            public function getPostsWithRawDQL($id)
+            {
+            return $this->getEntityManager()
+            ->createQuery('
+            SELECT p
+            FROM AppBundle:Post p
+            WHERE p.id < :id
+            ORDER BY p.publishedAt DESC
+            ')
+            ->setParameter('id', $id)
+            ->getResult()
+            ;
+            }
+        </code>
+    </pre>
+    {{ dump(postsWithRawDQL) }}
+    <pre>
+        <code class="php">
+            public function getPostsWithRawSQL($id)
+            {
+            return $this->getEntityManager()
+            ->getConnection()
+            ->executeQuery('
+            SELECT p.*
+            FROM symfony_demo_post p
+            WHERE p.id < '.$id.'
+            ORDER BY p.publishedAt DESC
+            ')  // ouch...
+            ->fetchAll();
+            }
+        </code>
+    </pre>
+    {{ dump(postsWithRawSQL) }}
+    <pre>
+        <code class="php">
+            public function getPostsWithNativeQuery($id)
+            {
+            $rsm = new ResultSetMappingBuilder($this->getEntityManager());
+            $rsm->addRootEntityFromClassMetadata(Post::class, 'p');
 
-            <p class="post-metadata">
-                <span class="metadata"><i class="fa fa-calendar"></i> {{ post.publishedAt|localizeddate('long', 'medium', null, 'UTC') }}</span>
-                <span class="metadata"><i class="fa fa-user"></i> {{ post.author.fullName }}</span>
-            </p>
+            return $this->getEntityManager()
+            ->createNativeQuery('
+            SELECT p.*
+            FROM symfony_demo_post p
+            WHERE p.id < :id
+            ORDER BY p.publishedAt DESC
+            ', $rsm)
+            ->setParameter('id', $id)
+            ->getResult();
+            }
+        </code>
+    </pre>
+    {{ dump(postsWithNativeQuery) }}
+    <pre>
+        <code class="php">
+            public function getPostsWithPreparedQuery()
+            {
+            $stmt = $this->getEntityManager()
+            ->getConnection()
+            ->prepare('
+            SELECT p.*
+            FROM symfony_demo_post p
+            ORDER BY p.publishedAt DESC
+            ');
 
-            {{ post.summary|md2html }}
+            $stmt->execute();
 
-            {{ include('blog/_post_tags.html.twig') }}
-        </article>
-    {% else %}
-        <div class="well">{{ 'post.no_posts_found'|trans }}</div>
-    {% endfor %}
+            return $stmt->fetchAll();
+            }
+        </code>
+    </pre>
+    {{ dump(postsWithPreparedQuery) }}
 
-    {% if posts.haveToPaginate %}
-        <div class="navigation text-center">
-            {{ pagerfanta(posts, 'twitter_bootstrap3_translated', {routeName: 'blog_index_paginated'}) }}
-        </div>
-    {% endif %}
-{% endblock %}
-
-{% block sidebar %}
-    {{ parent() }}
-
-    {{ show_source_code(_self) }}
-    {{ include('blog/_rss.html.twig') }}
 {% endblock %}

@@ -48,12 +48,28 @@ class BlogController extends Controller
      */
     public function indexAction($page, $_format)
     {
-        $posts = $this->getDoctrine()->getRepository(Post::class)->findLatest($page);
+        /** @var \AppBundle\Repository\PostRepository $postsRepository */
+        $postsRepository               = $this->getDoctrine()->getRepository(Post::class);
+        $postsAsObjects                = $postsRepository->getPostsAsObjects(5);
+        $onlyPostTitles                = $postsRepository->getOnlyPostTitles(5);
+        $postAsPartialObjects          = $postsRepository->getPostAsPartialObjects(5);
+        $postsAsListWithCustomHydrator = $postsRepository->getPostsAsListWithCustomHydrator(5);
+        $postsWithRawDQL               = $postsRepository->getPostsWithRawDQL(5);
+        $postsWithRawSQL               = $postsRepository->getPostsWithRawSQL(5);
+        $postsWithNativeQuery          = $postsRepository->getPostsWithNativeQuery(5);
+        $postsWithPreparedQuery        = $postsRepository->getPostsWithPreparedQuery(5);
 
-        // Every template name also has two extensions that specify the format and
-        // engine for that template.
-        // See https://symfony.com/doc/current/templating.html#template-suffix
-        return $this->render('blog/index.'.$_format.'.twig', ['posts' => $posts]);
+
+        return $this->render('blog/index.html.twig', [
+            'postsAsObjects'                => $postsAsObjects,
+            'onlyPostTitles'                => $onlyPostTitles,
+            'postAsPartialObjects'          => $postAsPartialObjects,
+            'postsAsListWithCustomHydrator' => $postsAsListWithCustomHydrator,
+            'postsWithRawDQL'               => $postsWithRawDQL,
+            'postsWithRawSQL'               => $postsWithRawSQL,
+            'postsWithNativeQuery'          => $postsWithNativeQuery,
+            'postsWithPreparedQuery'        => $postsWithPreparedQuery,
+        ]);
     }
 
     /**

@@ -76,6 +76,8 @@ doctrine:
     orm:
         auto_generate_proxy_classes: "%kernel.debug%"
         auto_mapping: true
+        hydrators:
+            KeyValueListHydrator: AppBundle\Doctrine\Hydrator\KeyValueListHydrator
 
 # Swiftmailer Configuration (used to send emails)
 # instead of configuring the mailer credentials in this file, we pull
